@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bad Apple - HTMX Server Commands Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/iconify-icon@3.0.0/dist/iconify-icon.min.js"></script>
+    <script defer src="/static/htmx.js"></script>
+    <script defer src="/static/sse.js"></script>
+    <script defer src="/static/server-commands.js"></script>
+    <style type="text/tailwindcss">
+        #progress {
+            @apply w-full origin-left scale-x-(--progress) h-px bg-white transition;
+        }
+    </style>
+</head>
+
+<body hx-ext="sse,server-commands" class="bg-black text-white p-4 sm:p-8 lg:p-12 flex flex-col items-center w-full h-dvh overflow-hidden">
+<div sse-connect="/bad-apple-stream" sse-swap="message"></div>
+
+<!-- GitHub link -->
+<div class="fixed top-3 right-3 sm:top-6 sm:right-6">
+    <a href="https://github.com/scriptogre/bad-apple-htmx-demo"
+       class="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-300 transition"
+       target="_blank">
+        <iconify-icon icon="mdi:github" class="translate-y-px"></iconify-icon>
+        <span>source code</span>
+    </a>
+</div>
+
+<!-- Title -->
+<h1 class="text-xl sm:text-2xl lg:text-3xl font-bold mt-6 sm:mt-9 lg:mt-12">
+    🍎 Bad Apple
+</h1>
+<h2 class="text-sm sm:text-base lg:text-lg text-gray-300 my-3">
+    using
+    <a href="https://htmx.org" class="text-[#3D72D7] hover:brightness-125 transition">
+        htmx
+    </a>
+    +
+    <a href="https://htmx.org/extensions/sse/" class="text-[#3D72D7] hover:brightness-125 transition">
+        <span>sse</span>
+    </a>
+    +
+    <a href="https://htmx.org/extensions/server-commands/" class="text-[#3D72D7] hover:brightness-125 transition">
+        <span>server-commands</span>
+    </a>
+</h2>
+
+<pre id="frames" class="flex-1 text-[0.5rem] sm:text-[0.625rem] md:text-xs lg:text-sm xl:text-base 2xl:text-lg leading-none content-center max-w-[100%] overflow-hidden">
+    Loading...
+</pre>
+
+<div class="w-full relative">
+    <div id="progress-text" class="absolute -top-6 left-0 text-xs text-gray-400">0%</div>
+    <div id="progress" style="--progress: 0%"></div>
+</div>
+
+</body>
+</html>
