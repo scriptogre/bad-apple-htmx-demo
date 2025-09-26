@@ -1,5 +1,7 @@
 import asyncio
+from contextlib import asynccontextmanager
 from typing import Generator
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -7,7 +9,28 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sse_starlette.sse import EventSourceResponse
 
-app = FastAPI(title="Bad Apple HTMX Demo")
+# Pre-load all frames into memory
+frames_cache = []
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Load frames into memory
+    frames_dir = Path("frames")
+    frame_files = sorted(frames_dir.glob("out*.jpg.txt")) if frames_dir.exists() else []
+
+    for frame_file in frame_files:
+        with open(frame_file, "r", encoding="utf-8") as f:
+            frames_cache.append(f.read())
+
+    yield  # Application runs here
+
+    # Shutdown: Clean up
+    frames_cache.clear()
+    print("Frames cache cleared")
+
+
+app = FastAPI(title="Bad Apple HTMX Demo", lifespan=lifespan)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -27,32 +50,15 @@ async def bad_apple_stream():
 
     async def generate_bad_apple_stream() -> Generator[str, None, None]:
         """Generate SSE stream for Bad Apple animation"""
-        from pathlib import Path
-
-        frames_dir = Path("frames")
-        frame_files = (
-            sorted(frames_dir.glob("out*.jpg.txt")) if frames_dir.exists() else []
-        )
-
-        if not frame_files:
+        if not frames_cache:
             yield '<htmx target="#frames" swap="innerHTML">No frames loaded. Please add frames to frames/ directory.</htmx>'
             return
 
         frame_duration = 1.0 / 60.0  # 60 FPS
 
-        for i, frame_file in enumerate(frame_files):
-            # Read frame content
-            import time
-            start_time = time.time()
-            with open(frame_file, "r", encoding="utf-8") as f:
-                frame_content = f.read()
-            read_time = time.time() - start_time
-
-            if i % 100 == 0:  # Log every 100 frames
-                print(f"Frame {i}: Read time {read_time*1000:.1f}ms")
-
+        for i, frame_content in enumerate(frames_cache):
             # Send progress updates
-            progress = (i + 1) / len(frame_files) * 100
+            progress = (i + 1) / len(frames_cache) * 100
             yield (
                 f'<htmx target="#progress" swap="outerHTML">'
                 f'   <div id="progress" style="--progress: {progress:.2f}%"></div>'
