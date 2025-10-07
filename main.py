@@ -1,13 +1,15 @@
 import asyncio
+import gzip
+import io
+import zlib
 from contextlib import asynccontextmanager
-from typing import Generator
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sse_starlette.sse import EventSourceResponse
+
 
 # Pre-load all frames into memory
 frames_cache = []
@@ -44,32 +46,60 @@ async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-@app.get("/bad-apple-stream")
+@app.get("/stream")
 async def bad_apple_stream():
     """SSE endpoint for Bad Apple animation"""
 
-    async def generate_bad_apple_stream() -> Generator[str, None, None]:
+    async def generate():
         """Generate SSE stream for Bad Apple animation"""
-        if not frames_cache:
-            yield '<htmx target="#frames" swap="innerHTML">No frames loaded. Please add frames to frames/ directory.</htmx>'
-            return
+
+        buffer = io.BytesIO()
+        gzip_file = gzip.GzipFile(fileobj=buffer, mode="wb")
+
+        def sse(html: str) -> bytes:
+            """Format HTML as SSE event and compress it"""
+
+            payload = "".join(f"data: {line}\n" for line in html.splitlines()) + "\n"
+            gzip_file.write(payload.encode("utf-8"))
+            gzip_file.flush(zlib.Z_SYNC_FLUSH)
+            compressed = buffer.getvalue()
+            buffer.seek(0)
+            buffer.truncate()
+            return compressed
 
         frame_duration = 1.0 / 60.0  # 60 FPS
+        total = len(frames_cache)
 
-        for i, frame_content in enumerate(frames_cache):
-            # Send progress updates
-            progress = (i + 1) / len(frames_cache) * 100
-            yield (
-                f'<htmx target="#progress" swap="outerHTML">'
-                f'   <div id="progress" style="--progress: {progress:.2f}%"></div>'
-                f"</htmx>"
+        for i, frame in enumerate(frames_cache):
+            progress = (i + 1) / total * 100
+
+            yield sse(
+                f'<htmx target="#frames" swap="textContent">'
+                f'{frame}'
+                f'</htmx>',
             )
-            yield f'<htmx target="#progress-text" swap="textContent">{progress:.2f}% / 100%</htmx>'
+            yield sse(
+                f'<htmx target="#progress" swap="outerHTML">'
+                f'<div id="progress" style="--progress: {progress:.2f}%"></div>'
+                f'</htmx>',
+            )
+            yield sse(
+                f'<htmx target="#progress-text" swap="textContent">'
+                f'{progress:.2f}% / 100%'
+                f'</htmx>',
+            )
 
-            # Send frame update
-            yield f'<htmx target="#frames" swap="textContent">{frame_content}</htmx>'
-
-            # Wait for next frame
             await asyncio.sleep(frame_duration)
 
-    return EventSourceResponse(generate_bad_apple_stream())
+        gzip_file.close()
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Content-Encoding": "gzip",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx/proxy buffering
+        },
+    )

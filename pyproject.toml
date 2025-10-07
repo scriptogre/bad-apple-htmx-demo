@@ -10,5 +10,4 @@ readme = "README.md"
 
 dependencies = [
     "fastapi[standard]==0.116.1",            # https://github.com/tiangolo/fastapi
-    "sse-starlette==3.0.2",                  # https://github.com/sysid/sse-starlette
 ]

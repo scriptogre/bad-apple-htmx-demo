@@ -6,9 +6,16 @@
     <title>Bad Apple - HTMX Server Commands Demo</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/iconify-icon@3.0.0/dist/iconify-icon.min.js"></script>
-    <script defer src="/static/htmx.js"></script>
-    <script defer src="/static/sse.js"></script>
-    <script defer src="/static/server-commands.js"></script>
+
+    <!-- htmx (with PR https://github.com/bigskysoftware/htmx/pull/3425 merged) -->
+    <script defer src="https://cdn.jsdelivr.net/gh/scriptogre/htmx@feature/expose-history-functions/src/htmx.js"></script>
+
+    <!-- htmx extension - sse (server-sent events) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2"></script>
+
+    <!-- htmx extension (new) - server-commands -->
+    <script defer src="https://cdn.jsdelivr.net/gh/scriptogre/htmx-extensions@main/src/server-commands/server-commands.js"></script>
+
     <style type="text/tailwindcss">
         #progress {
             @apply w-full origin-left scale-x-(--progress) h-px bg-white transition;
@@ -17,7 +24,8 @@
 </head>
 
 <body hx-ext="sse,server-commands" class="bg-black text-white p-4 sm:p-8 lg:p-12 flex flex-col items-center w-full h-dvh overflow-hidden">
-<div sse-connect="/bad-apple-stream" sse-swap="message"></div>
+
+<div sse-connect="/stream" sse-swap="message"></div>
 
 <!-- GitHub link -->
 <div class="fixed top-3 right-3 sm:top-6 sm:right-6">
@@ -43,7 +51,7 @@
         <span>sse</span>
     </a>
     +
-    <a href="https://htmx.org/extensions/server-commands/" class="text-[#3D72D7] hover:brightness-125 transition">
+    <a href="https://github.com/scriptogre/htmx-extensions/tree/main/src/server-commands" class="text-[#3D72D7] hover:brightness-125 transition">
         <span>server-commands</span>
     </a>
 </h2>
